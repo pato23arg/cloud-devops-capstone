@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "ENVIRONMENTNAME",
+        "ParameterValue": "capstone-project"
+    },
+    {
+        "ParameterKey": "MYIP",
+        "ParameterValue": "79.155.6.195/32"        
+    },
+    {
+        "ParameterKey": "EKSROLE",
+        "ParameterValue": "arn:aws:iam::628641662978:role/eksServiceRole"
+    },
+    {
+        "ParameterKey": "EKSNODEGROUPROLE",
+        "ParameterValue": "arn:aws:iam::628641662978:role/NodeInstanceRole"
+    }
+]
