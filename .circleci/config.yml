@@ -108,7 +108,8 @@ jobs:
               --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
               --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
               --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
-              --parameters clouformation/kube-network-parameters.json
+              --parameters clouformation/kube-network-parameters.json \
+              --region=us-east-1
 
       - run:
           name: Deploy K8s Cluster
@@ -118,7 +119,8 @@ jobs:
               --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
               --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
               --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
-              --parameters clouformation/kube-cluster-parameters.json
+              --parameters clouformation/kube-cluster-parameters.json \
+              --region=us-east-1
 
       - run:
           name: Fetch k8s Master details
