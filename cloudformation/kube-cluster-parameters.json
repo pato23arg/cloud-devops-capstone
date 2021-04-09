@@ -1,18 +1,18 @@
 [
     {
         "ParameterKey": "ENVIRONMENTNAME",
-        "ParameterValue": "capstone-project"
+        "ParameterValue": "udacity-capstone"
     },
     {
         "ParameterKey": "MYIP",
-        "ParameterValue": "79.155.6.195/32"        
+        "ParameterValue": "0.0.0.0/0"
     },
     {
         "ParameterKey": "EKSROLE",
-        "ParameterValue": "arn:aws:iam::628641662978:role/eksServiceRole"
+        "ParameterValue": "arn:aws:iam::234971334723:role/eksServiceRole"
     },
     {
         "ParameterKey": "EKSNODEGROUPROLE",
-        "ParameterValue": "arn:aws:iam::628641662978:role/NodeInstanceRole"
+        "ParameterValue": "arn:aws:iam::234971334723:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"
     }
 ]
