@@ -90,116 +90,7 @@ jobs:
             . venv/bin/activate 
             make lint 
 
-  build-backend:
-    docker:
-      - image: circleci/node:13.8.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [backend-build]
-      - run:
-          name: Install dependencies
-          command: |
-            cd backend
-            npm install
-      - persist_to_workspace:
-          root: .
-          paths: backend/node_modules
-      - run:
-          name: Compile the code
-          command: |
-            cd backend
-            npm run build
-      - persist_to_workspace:
-          root: .
-          paths: backend/dist
-      - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build
-      - save_cache:
-          paths: [backend/dist]
-          key: backend-dist
-      - slack/status
-
-  test-frontend:
-    docker:
-      - image: << pipeline.parameters.circleci_image >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [frontend-build]
-      - run:
-          name: Install Frontend deps
-          command: |
-            cd frontend
-            npm install
-            npm install oauth-sign
-      - run:
-          name: Test code
-          command: |
-            cd frontend
-            npm run test
-      - slack/status
-
-  test-backend:
-    docker:
-      - image: << pipeline.parameters.circleci_image >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [backend-build]
-      - run:
-          name: Install Backend deps
-          command: |
-            cd backend
-            npm install
-      - run:
-          name: Test code
-          command: |
-            cd backend
-            npm run test
-      - slack/status
-            
-  scan-frontend:
-    docker:
-      - image: << pipeline.parameters.circleci_image >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [frontend-build]
-      - run:
-          name: Install Frontend deps
-          command: |
-            cd frontend
-            npm install
-            npm install oauth-sign
-      - run:
-          name: Scan Frontend
-          command: |
-            cd frontend
-            npm audit fix --audit-level=critical --force
-      - slack/status
-
-  scan-backend:
-    docker:
-      - image: << pipeline.parameters.circleci_image >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [backend-build]
-      - run:
-          name: Install Backend deps
-          command: |
-            cd backend
-            npm install
-      - run:
-          name: Scan Backend
-          command: |
-            cd backend
-            npm audit fix --audit-level=critical --force
-      - slack/status
-
-  deploy-infrastructure:
+  deploy-k8s:
     docker:
       - image: amazon/aws-cli
     steps:
@@ -210,39 +101,35 @@ jobs:
           command: |
             yum -y install tar gzip
       - run:
-          name: Ensure back-end infrastructure exists
+          name: Deploy Network for K8s
           command: |
             aws cloudformation deploy \
-              --template-file .circleci/files/backend.yml \
-              --tags project=udapeople-backend-${CIRCLE_WORKFLOW_ID} \
-              --stack-name udapeople-backend-${CIRCLE_WORKFLOW_ID} \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}"
+              --template-file clouformation/kube-network.yml \
+              --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
+              --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
+              --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
+              --parameters clouformation/kube-network-parameters.json
+
       - run:
-          name: Fetch and Save Backend URL
+          name: Deploy K8s Cluster
           command: |
-            BACKEND_IP=$(aws ec2 describe-instances \
+            aws cloudformation deploy \
+              --template-file clouformation/kube-cluster.yml \
+              --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
+              --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
+              --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
+              --parameters clouformation/kube-cluster-parameters.json
+
+      - run:
+          name: Fetch k8s Master details
+          command: |
+            MASTER_IP=$(aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID}" \
+              --filters "Name=tag:project,Values=udacity-capstone-${CIRCLE_WORKFLOW_ID}-net" \
               --output text)
-            echo $BACKEND_IP
-            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "http://$BACKEND_IP:3030" https://api.memstash.io/values/BACKEND_URL
-      - run:
-          name: Ensure front-end infrastructure exist
-          command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/frontend.yml \
-              --tags project=udapeople-frontend-${CIRCLE_WORKFLOW_ID} \
-              --stack-name udapeople-frontend-${CIRCLE_WORKFLOW_ID} \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}"
-      - run:
-          name: Add back-end ip to ansible inventory
-          working_directory: ./.circleci/ansible
-          command: |
-            aws ec2 describe-instances \
-                 --query 'Reservations[*].Instances[*].PublicIpAddress' \
-                 --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID}" \
-                 --output text > inventory.txt
-            cat inventory.txt
+            echo $MASTER_IP
+            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "https://$MASTER_IP" https://api.memstash.io/values/MASTER_URL
+            
       - persist_to_workspace:
           root: .
           paths:
@@ -251,6 +138,7 @@ jobs:
       - destroy-environment:
           wkfl_id: ${CIRCLE_WORKFLOW_ID}
           when: on_fail
+      - slack/status
   configure-infrastructure:
     docker:
       - image: << pipeline.parameters.py_alp_image >>
