@@ -96,12 +96,10 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/deployment-blue.yml
-          resource-name: deployment/api-endpoint-blue
+          resource-file-path: "kubernetes/deployment-blue.yml"
+          resource-name: deployment/deployment-blue
       - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: kubernetes/service-blue.yml
-          resource-name: service/api-endpoint-blue
+          resource-file-path: "kubernetes/service-blue.yml"
 
   create-deployment-green:
     executor: aws-eks/python3
@@ -117,12 +115,10 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/deployment-green.yml
-          resource-name: deployment/api-endpoint-green          
+          resource-file-path: "kubernetes/deployment-green.yml"
+          resource-name: deployment/deployment-green          
       - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: kubernetes/service-green.yml
-          resource-name: service/api-endpoint-green
+          resource-file-path: "kubernetes/service-green.yml"
 
   migrate-deployment:
     executor: aws-eks/python3
@@ -137,9 +133,8 @@ jobs:
           cluster-name: << pipeline.parameters.cluster-name >>
           install-kubectl: true      
       - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: kubernetes/service-migrate.yml
-          resource-name: service/api-endpoint-green
+          resource-file-path: "kubernetes/service-migrate.yml"
+          resource-name: loadbalancer-blue
               
 workflows:
   deployment:
