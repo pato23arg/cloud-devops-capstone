@@ -9,30 +9,24 @@ In this project I will apply the skills and knowledge which were developed throu
 - Working in AWS
 - Using CircleCI to implement Continuous Integration and Continuous Deployment
 - Building pipelines
-- Using Ansible and CloudFormation to deploy clusters
+- Using EKS CircleCI Orb to deploy clusters
 - Building Kubernetes clusters
 - Building Docker containers in pipelines
 
 ## Application
 
-Explain Wordpress or Hipster Shop app (need to choose wich one to use):
+In this capstone, we will reuse the Python app used in project #4 to that implements ML to make predictions, and publish a Flask API:
 
 ```
-kubernetes manifest here 
+kubernetes manifest files in /kubernetes folder. 
 ```
 
 Application brief explanation.
 
 ## Kubernetes Cluster
 
-Cloudformation is used to deploy the Kubernetes Cluster. The code is in `cloudformation` directory. It is divided in two stacks, one for the network (kube-network.yml) and a second one for the cluster itself (kube-cluster.yml).
+The EKS Orb is used to deploy the Kubernetes Cluster. The code is in `cloudformation` directory. It is divided in two stacks, one for the deployment (kube-deployment-blue/green.yml) and a second one for the loadbalancer service (service-green/blue.yml).
 
-There are scripts to create and update the stacks. For example, to create both stacks:
-
-```
-./stack-create.sh udacity-net kube-network.yml kube-network-parameters.json
-./stack-create.sh udacity-eks kube-cluster.yml kube-cluster-parameters.json
-```
 This will create the stack in the following order:
 
 1. VPC in eu-east-1.
@@ -48,7 +42,7 @@ The node group is created in EC2:
 
 ## CircleCI Pipeline
 
-I am using a CI/CD pipeline on a blue/green deployment. On each new <<app>> generated, the docker image is updated, pushed to AWS and the Kubernetes pods are rolled out so they restart with the new image from the repository. There is a load balancer before the exposed 80 TCP ports to avoid having downtime. These are the steps in more detail:
+I am using a CI/CD pipeline on a blue/green deployment. On each new <<app>> generated, the docker image is updated, pushed to DockerHub and the Kubernetes pods are deployed so they start with the new image from the repository. There is a load balancer before the exposed 80 TCP ports to avoid having downtime. These are the steps in more detail:
 
 <<pic here>>
 
