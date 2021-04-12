@@ -40,7 +40,7 @@ This will create the stack in the following order:
 
 ## CircleCI Pipeline
 
-I am using a CI/CD pipeline on a blue/green deployment. On each new <<app>> generated, the docker image is updated, pushed to DockerHub and the Kubernetes pods are deployed so they start with the new image from the repository. There is a load balancer before the exposed 80 TCP ports to avoid having downtime. These are the steps in more detail:
+I am using a CI/CD pipeline on a rollout deployment. On each new deployment generated, the docker image is updated, an "old" and "latest" version pushed to DockerHub and the Kubernetes pods are deployed so they start with the old image from the repository. Then, the image is updated during the rollout step to "latest". There is a load balancer before the exposed 80 TCP ports to avoid having downtime. These are the steps in more detail:
 
 <<pic here>>
 
@@ -78,12 +78,14 @@ python3 app.py
 
 4. Build & Push
 
-The docker image is build using the Dockerfile and the image is pushed to Docker Hub:
+The docker image is build using the Dockerfile and the image is pushed to Docker Hub, I push an "old" and "latest" to perform the rollout later:
 
 ```
             docker build -t pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID} .
+            docker build -t pato23arg/api-endpoint:old .
             docker login -u ${DOCKER_LOGIN} -p ${DOCKER_PASSWORD}
             docker push pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID}
+            docker push pato23arg/api-endpoint:old
 ```
 
 6. The K8S cluster is deployed in EKS:
@@ -105,7 +107,7 @@ The Kubernetes services are checked:
 kubectl get services
 ```
 
-7. Green/Blue Deployments
+7. Green Server Deployment
 
 Deploy the pods to use the new pushed image.
 
@@ -115,28 +117,31 @@ Deploy the pods to use the new pushed image.
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/deployment-blue.yml
-          resource-name: deployment/api-endpoint-blue
+          resource-file-path: kubernetes/deployment-green.yml
+          resource-name: deployment/api-endpoint-green
       - kubernetes/create-or-update-resource:
-          get-rollout-status: true
-          resource-file-path: kubernetes/service-blue.yml
-          resource-name: service/api-endpoint-blue
+          resource-file-path: kubernetes/service-green.yml
 ```
 
-8. Green/Blue Deployments
 
-Migrate the Blue loadbalacer app to Green to force service switchover:
+![initial_deploy](./screenshoots/before_rollout.JPG)
+
+
+8. Rollout Deployments
+
+After creation, the Deployment is rolled out to update the docker image, this process restarts the Deployment:
 
 ```
       - aws-eks/update-kubeconfig-with-authenticator:
           cluster-name: << pipeline.parameters.cluster-name >>
-          install-kubectl: true      
+          install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/service-migrate.yml
-          resource-name: service/api-endpoint-green
+          resource-file-path: "kubernetes/rollout-green.yml"
+          resource-name: deployment/webserver-green
+          
 ```
-
+![rollout_deploy](./screenshoots/after_rollout.JP
 
 ## View the public web page
 
