@@ -93,7 +93,20 @@ jobs:
           name: run lint
           command: |
             . venv/bin/activate 
-            make lint 
+            make lint
+    
+  build-and-push-docker-image:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build application Docker image
+          command: |
+            docker build -t pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID} .
+            docker login -u ${DOCKER_LOGIN} -p ${DOCKER_PASSWORD}
+            docker push pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID}
 
   test-k8s:
     executor: aws-eks/python3
@@ -422,6 +435,8 @@ workflows:
   deployment:
     jobs:
       - build-and-lint
+      - build-and-push-docker-image:
+          requires: [build-and-lint]
       - aws-eks/create-cluster:
           requires: [build-and-lint]
           aws-region: ${AWS_DEFAULT_REGION}
