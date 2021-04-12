@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver-green
+  labels:
+    app: webserver-green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webserver-green
+  template:
+    metadata:
+      labels:
+        app: webserver-green
+    spec:
+      containers:
+      - name: webserver-green
+        image: pato23arg/api-endpoint:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
