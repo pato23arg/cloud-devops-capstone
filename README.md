@@ -141,7 +141,7 @@ After creation, the Deployment is rolled out to update the docker image, this pr
           resource-name: deployment/webserver-green
           
 ```
-![rollout_deploy](./screenshoots/after_rollout.JP
+![rollout_deploy](./screenshoots/after_rollout.JPG)
 
 ## View the public web page
 
