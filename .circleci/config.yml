@@ -50,12 +50,17 @@ parameters:
   py_alp_image:
     type: string
     default: python:3.7-alpine3.11
+  cluster-name:
+    type: string
+    default: k8s-${CIRCLE_WORKFLOW_ID}
 
 orbs:
   slack: circleci/slack@3.4.2  # for slack integration to https://udapeople.slack.com; reference: https://circleci.com/blog/continuous-integration-slack-twilio/
-
+  aws-eks: circleci/aws-eks@0.2.3
+  kubernetes: circleci/kubernetes@0.4.0
+  
 jobs:
-  build:
+  build-and-lint:
     docker:
       - image: << pipeline.parameters.circleci_image >>
     working_directory: ~/repo
@@ -91,83 +96,38 @@ jobs:
             make lint 
 
   deploy-k8s:
-    docker:
-      - image: amazon/aws-cli
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
     steps:
-      # Checkout code from git
-      - checkout
+      - kubernetes/install
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
       - run:
-          name: Install Dependencies for Persistence
           command: |
-            yum -y install tar gzip
-      - run:
-          name: Deploy Network for K8s
-          command: |
-            aws cloudformation deploy \
-              --template-file clouformation/kube-network.yml \
-              --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
-              --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-net \
-              --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
-              --parameters clouformation/kube-network-parameters.json \
-              --region=us-east-1
-
-      - run:
-          name: Deploy K8s Cluster
-          command: |
-            aws cloudformation deploy \
-              --template-file clouformation/kube-cluster.yml \
-              --tags project=udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
-              --stack-name udacity-capstone-${CIRCLE_WORKFLOW_ID}-k8s \
-              --capabilities "CAPABILITY_IAM" "CAPABILITY_NAMED_IAM" \
-              --parameters clouformation/kube-cluster-parameters.json \
-              --region=us-east-1
-
-      - run:
-          name: Fetch k8s Master details
-          command: |
-            MASTER_IP=$(aws ec2 describe-instances \
-              --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=udacity-capstone-${CIRCLE_WORKFLOW_ID}-net" \
-              --output text)
-            echo $MASTER_IP
-            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "https://$MASTER_IP" https://api.memstash.io/values/MASTER_URL
-            
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .circleci/ansible/inventory.txt
-      # Here's where you will add some code to rollback on failure      
-      - destroy-environment:
-          wkfl_id: ${CIRCLE_WORKFLOW_ID}
-          when: on_fail
+            kubectl get services
+          name: Test cluster
       - slack/status
-  configure-infrastructure:
-    docker:
-      - image: << pipeline.parameters.py_alp_image >>
+      
+  create-deployment-blue:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
     steps:
-      # Checkout code from git
       - checkout
-      # Add ssh keys with fingerprint
-      - add_ssh_keys: 
-          fingerprints: ["5a:13:2a:3a:3f:15:df:9e:d2:2a:d4:ea:84:46:ea:02"]
-      # attach workspace
-      - attach_workspace:
-          at: .
-      - run:
-          name: Install dependencies
-          working_directory: ./.circleci/ansible
-          command: |
-            # Your code here
-            apk add --update ansible
-      - run:
-          name: Configure server
-          working_directory: ./.circleci/ansible
-          command: |
-            ansible-playbook -i inventory.txt configure-server.yml
-      # Here's where you will add some code to rollback on failure      
-      - destroy-environment:
-          wkfl_id: ${CIRCLE_WORKFLOW_ID}
-          when: on_fail
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          install-kubectl: true
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/blue-deployment.yaml
+          resource-name: deployment/api-endpoint
 
   run-migrations:
     docker:
@@ -414,32 +374,8 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - deploy-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [master]
-      - configure-infrastructure:
-          requires: [deploy-infrastructure]
-      - run-migrations:
-          requires: [configure-infrastructure]
-      - deploy-frontend:
-          requires: [run-migrations]
-      - deploy-backend:
-          requires: [run-migrations]
-      - smoke-test:
-          requires: [deploy-backend, deploy-frontend]
-      - cloudfront-update:
-          requires: [smoke-test]
-      - cleanup:
-          requires: [cloudfront-update]
+      - build-and-lint
+      - deploy-k8s
+          requires: [build-and-lint]
+      - create-deployment-blue
+          requires: [deploy-k8s]
