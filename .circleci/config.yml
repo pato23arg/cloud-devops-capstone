@@ -97,7 +97,7 @@ jobs:
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: "kubernetes/deployment-blue.yml"
-          resource-name: deployment/deployment-blue
+          resource-name: deployment/webserver-blue
       - kubernetes/create-or-update-resource:
           resource-file-path: "kubernetes/service-blue.yml"
 
@@ -116,7 +116,7 @@ jobs:
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: "kubernetes/deployment-green.yml"
-          resource-name: deployment/deployment-green          
+          resource-name: deployment/webserver-green          
       - kubernetes/create-or-update-resource:
           resource-file-path: "kubernetes/service-green.yml"
 
