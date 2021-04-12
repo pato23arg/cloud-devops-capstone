@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: webserver-green
-        image: pato23arg/api-endpoint:latest
+        image: pato23arg/api-endpoint:old
         imagePullPolicy: Always
         ports:
         - containerPort: 80
