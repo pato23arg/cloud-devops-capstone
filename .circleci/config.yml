@@ -95,7 +95,7 @@ jobs:
             . venv/bin/activate 
             make lint 
 
-  deploy-k8s:
+  test-k8s:
     executor: aws-eks/python3
     parameters:
       cluster-name:
@@ -375,9 +375,14 @@ workflows:
   default:
     jobs:
       - build-and-lint
-      - deploy-k8s:
+      - aws-eks/create-cluster:
+          cluster-name: k8s-${WORKFLOW_ID}
+      - test-k8s:
           cluster-name: << pipeline.parameters.cluster-name >>
           requires: [build-and-lint]
       - create-deployment-blue:
           cluster-name: << pipeline.parameters.cluster-name >>
           requires: [deploy-k8s]
+      - aws-eks/delete-cluster:
+          cluster-name: k8s-${WORKFLOW_ID}
+          requires: [test-k8s]
