@@ -163,4 +163,4 @@ workflows:
           requires: [create-deployment-blue, create-deployment-green]         
       - aws-eks/delete-cluster:
           cluster-name: k8s-${WORKFLOW_ID}
-          requires: [migrate-deployment]
+          requires: [rollout-deployment]
