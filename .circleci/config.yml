@@ -183,11 +183,6 @@ jobs:
           get-rollout-status: true
           resource-file-path: kubernetes/service-migrate.yml
           resource-name: service/api-endpoint-green
-      - kubernetes/delete-resource:
-          get-rollout-status: true
-          resource-file-path: kubernetes/deployment-green.yml
-          resource-name: deployment/api-endpoint-green
-  
   
   run-migrations:
     docker:
