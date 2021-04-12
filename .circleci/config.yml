@@ -129,6 +129,23 @@ jobs:
           resource-file-path: kubernetes/blue-deployment.yaml
           resource-name: deployment/api-endpoint
 
+  create-deployment-green:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+    steps:
+      - checkout
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          install-kubectl: true
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/green-deployment.yaml
+          resource-name: deployment/api-endpoint
+
   run-migrations:
     docker:
       - image: << pipeline.parameters.circleci_image >>
@@ -377,6 +394,7 @@ workflows:
       - build-and-lint
       - aws-eks/create-cluster:
           requires: [build-and-lint]
+          aws-region: ${AWS_DEFAULT_REGION}
           cluster-name: k8s-${CIRCLE_WORKFLOW_ID}
       - test-k8s:
           cluster-name: << pipeline.parameters.cluster-name >>
@@ -384,6 +402,9 @@ workflows:
       - create-deployment-blue:
           cluster-name: << pipeline.parameters.cluster-name >>
           requires: [test-k8s]
+      - create-deployment-green:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          requires: [test-k8s]
       - aws-eks/delete-cluster:
           cluster-name: k8s-${WORKFLOW_ID}
-          requires: [create-deployment-blue]
+          requires: [create-deployment-blue, create-deployment-green]
