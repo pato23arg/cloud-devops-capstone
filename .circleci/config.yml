@@ -382,7 +382,7 @@ workflows:
           requires: [build-and-lint]
       - create-deployment-blue:
           cluster-name: << pipeline.parameters.cluster-name >>
-          requires: [deploy-k8s]
+          requires: [test-k8s]
       - aws-eks/delete-cluster:
           cluster-name: k8s-${WORKFLOW_ID}
           requires: [test-k8s]
