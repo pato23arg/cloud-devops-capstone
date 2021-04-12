@@ -156,7 +156,10 @@ workflows:
           requires: [aws-eks/create-cluster, test-k8s]
       - rollout-deployment:
           cluster-name: k8s-${WORKFLOW_ID}
-          requires: [create-deployment-green]        
+          requires: [create-deployment-green]
+      - get-services:
+          cluster-name: k8s-${WORKFLOW_ID}
+          requires: [rollout-deployment]  
       - aws-eks/delete-cluster:
           cluster-name: k8s-${WORKFLOW_ID}
-          requires: [rollout-deployment]
+          requires: [get-services]
