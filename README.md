@@ -148,14 +148,59 @@ After creation, the Deployment is rolled out to update the docker image, this pr
 Finally, enter the public DNS record in the web browser to access the page.
 
 ```
-$ kubectl get deployment
-NAME        READY   UP-TO-DATE   AVAILABLE   AGE
-webserver-blue   1/1     1            1           7m30s
-webserver-green   1/1     1            1           7m30s
-$ kubectl get service
-NAME           TYPE           CLUSTER-IP    EXTERNAL-IP                                                              PORT(S)        AGE
-kubernetes     ClusterIP      172.20.0.1    <none>                                                                   443/TCP        19m
-loadbalancer-blue   LoadBalancer   172.20.75.5   <<service-url>>   80:31022/TCP   
+#!/bin/bash -eo pipefail
+kubectl get deployment
+kubectl get services
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+webserver-green   1/1     1            1           79s
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP                                                              PORT(S)        AGE
+kubernetes           ClusterIP      10.100.0.1      <none>                                                                   443/TCP        10m
+loadbalancer-green   LoadBalancer   10.100.201.32   afc70ddec460e480a826c16ec3983c20-205064547.*********.elb.amazonaws.com   80:30786/TCP   51s
+CircleCI received exit code 0
 ```
 
-<< app webpage >>
+And run prediction from CLI or bash, using the provided script:
+
+```
+#!/usr/bin/env bash
+
+PORT=8000
+echo "Port: $PORT"
+
+# POST method predict
+curl -d '{
+   "CHAS":{
+      "0":0
+   },
+   "RM":{
+      "0":6.575
+   },
+   "TAX":{
+      "0":296.0
+   },
+   "PTRATIO":{
+      "0":15.3
+   },
+   "B":{
+      "0":396.9
+   },
+   "LSTAT":{
+      "0":4.98
+   }
+}'\
+     -H "Content-Type: application/json" \
+     -X POST http://afc70ddec460e480a826c16ec3983c20-205064547.us-east-1.elb.amazonaws.com/predict
+
+
+**************************
+
+./make_prediction.sh
+
+{
+  "prediction": [
+    20.35373177134412
+  ]
+}
+
+```
+![test_prediction](./screenshoots/prediction_test.JPG)
