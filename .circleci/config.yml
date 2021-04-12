@@ -354,44 +354,7 @@ jobs:
           when: on_fail
       - revert-migrations:
           wkfl_id: ${CIRCLE_WORKFLOW_ID}
-          when: on_fail 
-
-  cloudfront-update:
-    docker:
-      - image: amazon/aws-cli
-    steps:
-      # Checkout code from git
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            # your code here
-            yum install -y nodejs curl
-      - run:
-          name: Store old WorkflowID
-          command: |
-            OldWorkflowID=$(aws cloudformation \
-              list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-              --no-paginate --output text)
-            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "$OldWorkflowID" https://api.memstash.io/values/OldWorkflowID
-            echo $OldWorkflowID > OldWorkflowID.txt
-      - run:
-          name: Update cloudfront distribution with new S3 bucket
-          command: |
-            # your code here
-            OldWorkflowID=$(cat OldWorkflowID.txt)
-            aws cloudformation deploy \
-              --template-file .circleci/files/cloudfront.yml \
-              --tags project=udapeople-cloudfront-${CIRCLE_WORKFLOW_ID} \
-              --stack-name udapeople-cloudfront-${OldWorkflowID} \
-              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID}"
-              
-      - destroy-environment:
-          wkfl_id: ${CIRCLE_WORKFLOW_ID}
-          when: on_fail
-      - revert-migrations:
-          wkfl_id: ${CIRCLE_WORKFLOW_ID}
-          when: on_fail   
+          when: on_fail  
 
   cleanup:
     docker:
