@@ -126,11 +126,11 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/deployment-blue.yaml
+          resource-file-path: kubernetes/deployment-blue.yml
           resource-name: deployment/api-endpoint-blue
        - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/service-blue.yaml
+          resource-file-path: kubernetes/service-blue.yml
           resource-name: service/api-endpoint-blue
 
   create-deployment-green:
@@ -147,13 +147,35 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/deployment-green.yaml
+          resource-file-path: kubernetes/deployment-green.yml
           resource-name: deployment/api-endpoint-green          
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/service-green.yaml
+          resource-file-path: kubernetes/service-green.yml
           resource-name: service/api-endpoint-green
 
+  migrate-deployment:
+    executor: aws-eks/python3
+    parameters:
+      cluster-name:
+        description: |
+          Name of the EKS cluster
+        type: string
+    steps:
+      - checkout
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          install-kubectl: true      
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/service-migrate.yml
+          resource-name: service/api-endpoint-green
+      - kubernetes/delete-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/deployment-green.yml
+          resource-name: deployment/api-endpoint-green
+  
+  
   run-migrations:
     docker:
       - image: << pipeline.parameters.circleci_image >>
@@ -413,6 +435,9 @@ workflows:
       - create-deployment-green:
           cluster-name: << pipeline.parameters.cluster-name >>
           requires: [test-k8s]
+      - migrate-deployment:
+          cluster-name: k8s-${WORKFLOW_ID}
+          requires: [create-deployment-blue, create-deployment-green]         
       - aws-eks/delete-cluster:
           cluster-name: k8s-${WORKFLOW_ID}
-          requires: [create-deployment-blue, create-deployment-green]
+          requires: [migrate-deployment]
