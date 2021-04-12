@@ -57,7 +57,7 @@ pip3 install -r requirements.txt
 Check the script's code with pylint. 
 
 ```
-pylint --disable=W0311 app.py
+pylint --disable=R,C,W1203,W1309 app.py
 ```
 
 This is the output when LINT fails:
@@ -78,39 +78,65 @@ python3 app.py
 
 4. Build & Push
 
-The docker image is build using the Dockerfile and the image is pushed to Amazon Elastic Container Registry.
+The docker image is build using the Dockerfile and the image is pushed to Docker Hub:
 
 ```
-aws ecr get-login-password --region eu-east-1 | docker login --username <<user>> --password-stdin <<pass>>
-docker -H=tcp://localhost:2375 build -t udacity-capstone .
-docker -H=tcp://localhost:2375 tag udacity-capstone:latest <<docker eks registry>>
-docker -H=tcp://localhost:2375 push <<docker eks registry>>
+            docker build -t pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID} .
+            docker login -u ${DOCKER_LOGIN} -p ${DOCKER_PASSWORD}
+            docker push pato23arg/api-endpoint:${CIRCLE_WORKFLOW_ID}
 ```
 
-5. Docker Container
+6. The K8S cluster is deployed in EKS:
 
-A Docker Container is started to test if there is any problem using the image.
-
-```
-docker -H=tcp://localhost:2375 container run <<docker eks registry>>
-```
-
-6. Deployment
-
-The Kubernetes pods are deployed using the pushed image. This is a no-op if the deployment files have not changed.
+A EKS cluster is deployed in AWS:
 
 ```
-kubectl apply -f deployment.yml
-kubectl apply -f loadbalancer.yml
+      - aws-eks/create-cluster:
+          requires: [build-and-lint]
+          aws-region: ${AWS_DEFAULT_REGION}
+          cluster-name: k8s-${CIRCLE_WORKFLOW_ID}
 ```
 
-7. Rollout Deployment
+6. Cluster test
 
-Rollout the pods to use the new pushed image.
+The Kubernetes services are checked:
 
 ```
-kubectl rollout restart deployment/webserver
+kubectl get services
 ```
+
+7. Green/Blue Deployments
+
+Deploy the pods to use the new pushed image.
+
+```
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          install-kubectl: true
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/deployment-blue.yml
+          resource-name: deployment/api-endpoint-blue
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/service-blue.yml
+          resource-name: service/api-endpoint-blue
+```
+
+8. Green/Blue Deployments
+
+Migrate the Blue loadbalacer app to Green to force service switchover:
+
+```
+      - aws-eks/update-kubeconfig-with-authenticator:
+          cluster-name: << pipeline.parameters.cluster-name >>
+          install-kubectl: true      
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/service-migrate.yml
+          resource-name: service/api-endpoint-green
+```
+
 
 ## View the public web page
 
@@ -119,11 +145,12 @@ Finally, enter the public DNS record in the web browser to access the page.
 ```
 $ kubectl get deployment
 NAME        READY   UP-TO-DATE   AVAILABLE   AGE
-webserver   1/1     1            1           7m30s
+webserver-blue   1/1     1            1           7m30s
+webserver-green   1/1     1            1           7m30s
 $ kubectl get service
 NAME           TYPE           CLUSTER-IP    EXTERNAL-IP                                                              PORT(S)        AGE
 kubernetes     ClusterIP      172.20.0.1    <none>                                                                   443/TCP        19m
-loadbalancer   LoadBalancer   172.20.75.5   <<service-url>>   80:31022/TCP   
+loadbalancer-blue   LoadBalancer   172.20.75.5   <<service-url>>   80:31022/TCP   
 ```
 
 << app webpage >>
