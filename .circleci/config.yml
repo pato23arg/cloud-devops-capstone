@@ -376,6 +376,8 @@ workflows:
     jobs:
       - build-and-lint
       - deploy-k8s:
+          cluster-name: << pipeline.parameters.cluster-name >>
           requires: [build-and-lint]
       - create-deployment-blue:
+          cluster-name: << pipeline.parameters.cluster-name >>
           requires: [deploy-k8s]
