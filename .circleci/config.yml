@@ -141,7 +141,7 @@ jobs:
           get-rollout-status: true
           resource-file-path: kubernetes/deployment-blue.yml
           resource-name: deployment/api-endpoint-blue
-       - kubernetes/create-or-update-resource:
+      - kubernetes/create-or-update-resource:
           get-rollout-status: true
           resource-file-path: kubernetes/service-blue.yml
           resource-name: service/api-endpoint-blue
