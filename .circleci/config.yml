@@ -126,8 +126,12 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/blue-deployment.yaml
-          resource-name: deployment/api-endpoint
+          resource-file-path: kubernetes/deployment-blue.yaml
+          resource-name: deployment/api-endpoint-blue
+       - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/service-blue.yaml
+          resource-name: service/api-endpoint-blue
 
   create-deployment-green:
     executor: aws-eks/python3
@@ -143,8 +147,12 @@ jobs:
           install-kubectl: true
       - kubernetes/create-or-update-resource:
           get-rollout-status: true
-          resource-file-path: kubernetes/green-deployment.yaml
-          resource-name: deployment/api-endpoint
+          resource-file-path: kubernetes/deployment-green.yaml
+          resource-name: deployment/api-endpoint-green          
+      - kubernetes/create-or-update-resource:
+          get-rollout-status: true
+          resource-file-path: kubernetes/service-green.yaml
+          resource-name: service/api-endpoint-green
 
   run-migrations:
     docker:
@@ -389,7 +397,7 @@ jobs:
             fi
             
 workflows:
-  default:
+  deployment:
     jobs:
       - build-and-lint
       - aws-eks/create-cluster:
