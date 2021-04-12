@@ -375,7 +375,7 @@ workflows:
   default:
     jobs:
       - build-and-lint
-      - deploy-k8s
+      - deploy-k8s:
           requires: [build-and-lint]
-      - create-deployment-blue
+      - create-deployment-blue:
           requires: [deploy-k8s]
