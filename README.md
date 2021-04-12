@@ -37,8 +37,6 @@ This will create the stack in the following order:
 6. Kubernetes cluster.
 7. Kubernetes node group.
 
-The node group is created in EC2:
-
 
 ## CircleCI Pipeline
 
@@ -62,13 +60,13 @@ Check the script's code with pylint.
 pylint --disable=W0311 app.py
 ```
 
-This is the output when the steps fails:
+This is the output when LINT fails:
 
-<<failed lint pic>>
+![FAIL Lint](./screenshoots/LINT_fail.JPG)
 
-And this is the output when it passes:
+And this is the output when LINT passes:
 
-<<success lint pic>>
+![SUCCESS Lint](./screenshoots/LINT_success.JPG)
   
 3. Run App
 
